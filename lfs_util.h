@@ -25,19 +25,23 @@
 #include <stdbool.h>
 #include <string.h>
 #include <inttypes.h>
-
+#include "FsHalConfig.h"
 #ifndef LFS_NO_MALLOC
 #include <stdlib.h>
 #endif
 #ifndef LFS_NO_ASSERT
 #include <assert.h>
 #endif
+
+
 #if !defined(LFS_NO_DEBUG) || \
         !defined(LFS_NO_WARN) || \
         !defined(LFS_NO_ERROR) || \
         defined(LFS_YES_TRACE)
 #include <stdio.h>
 #endif
+#include "debugPrint.h"
+#include "Util.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -49,54 +53,41 @@ extern "C"
 // macros must not have side-effects as the macros can be removed for a smaller
 // code footprint
 
+
+
 // Logging functions
-#ifndef LFS_TRACE
 #ifdef LFS_YES_TRACE
-#define LFS_TRACE_(fmt, ...) \
-    printf("%s:%d:trace: " fmt "%s\n", __FILE__, __LINE__, __VA_ARGS__)
-#define LFS_TRACE(...) LFS_TRACE_(__VA_ARGS__, "")
+#define LFS_TRACE(fmt,...)   PLATFORM_DEBUGF(DEBUG_PLATFORM_FILE_SYS,("%s:%d:trace: " fmt "% \n", Util_getFileName(__FILE__), __LINE__,__VA_ARGS__))
 #else
 #define LFS_TRACE(...)
 #endif
-#endif
 
-#ifndef LFS_DEBUG
 #ifndef LFS_NO_DEBUG
-#define LFS_DEBUG_(fmt, ...) \
-    printf("%s:%d:debug: " fmt "%s\n", __FILE__, __LINE__, __VA_ARGS__)
-#define LFS_DEBUG(...) LFS_DEBUG_(__VA_ARGS__, "")
+#define LFS_DEBUG(fmt,...) PLATFORM_DEBUGF(DEBUG_PLATFORM_FILE_SYS, ("%s:%d:lfs_debug: " fmt "%s\r\n", Util_getFileName(__FILE__), __LINE__, __VA_ARGS__))
 #else
 #define LFS_DEBUG(...)
-#endif
 #endif
 
 #ifndef LFS_WARN
 #ifndef LFS_NO_WARN
-#define LFS_WARN_(fmt, ...) \
-    printf("%s:%d:warn: " fmt "%s\n", __FILE__, __LINE__, __VA_ARGS__)
+#define LFS_WARN_(fmt, ...) PLATFORM_DEBUGF(DEBUG_PLATFORM_FILE_SYS, ("%s:%d:lfs_warn: " fmt "%s\r\n", Util_getFileName(__FILE__), __LINE__, __VA_ARGS__))
 #define LFS_WARN(...) LFS_WARN_(__VA_ARGS__, "")
 #else
 #define LFS_WARN(...)
 #endif
 #endif
 
-#ifndef LFS_ERROR
 #ifndef LFS_NO_ERROR
-#define LFS_ERROR_(fmt, ...) \
-    printf("%s:%d:error: " fmt "%s\n", __FILE__, __LINE__, __VA_ARGS__)
-#define LFS_ERROR(...) LFS_ERROR_(__VA_ARGS__, "")
+#define LFS_ERROR(fmt,...) PLATFORM_DEBUGF(DEBUG_PLATFORM_FILE_SYS, ("%d:lfs_error: " fmt "%s\r\n", __LINE__, __VA_ARGS__))
 #else
 #define LFS_ERROR(...)
 #endif
-#endif
 
 // Runtime assertions
-#ifndef LFS_ASSERT
 #ifndef LFS_NO_ASSERT
-#define LFS_ASSERT(test) assert(test)
+#define LFS_ASSERT(test) ASSERT(test)
 #else
 #define LFS_ASSERT(test)
-#endif
 #endif
 
 
@@ -218,7 +209,7 @@ uint32_t lfs_crc(uint32_t crc, const void *buffer, size_t size);
 // Note, memory must be 64-bit aligned
 static inline void *lfs_malloc(size_t size) {
 #ifndef LFS_NO_MALLOC
-    return malloc(size);
+    return pvPortMalloc(size);
 #else
     (void)size;
     return NULL;
@@ -228,7 +219,7 @@ static inline void *lfs_malloc(size_t size) {
 // Deallocate memory, only used if buffers are not provided to littlefs
 static inline void lfs_free(void *p) {
 #ifndef LFS_NO_MALLOC
-    free(p);
+	vPortFree(p);
 #else
     (void)p;
 #endif
